@@ -1,0 +1,22 @@
+[package]
+name = "sensearcdb-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB shared types, errors, constants, and configuration"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+config = { workspace = true }
+arc-swap = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+rusqlite = { workspace = true }
+axum = { workspace = true }
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+# QA 阶段 6 独立回归：cert_algorithm "SM2" 反序列化拒绝验证。
+serde_json = { workspace = true }

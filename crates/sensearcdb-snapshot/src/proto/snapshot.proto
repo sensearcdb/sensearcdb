@@ -1,0 +1,165 @@
+// snapshot.proto — SenseArcDB Snapshot gRPC service definition.
+//
+// G3: 快照统一走 gRPC 数据面（纯 gRPC）。提供单点/批量/游标全量枚举/实时订阅。
+
+syntax = "proto3";
+
+package sensearcdb.snapshot.v1;
+
+// ─── Snapshot Service ───
+
+service SnapshotService {
+    /// 单点查询：根据 tag_id 获取当前最新快照值。
+    rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+
+    /// 批量查询：一次 RPC 返回多个 tag 的当前快照值。
+    rpc BatchGetSnapshot(BatchGetSnapshotRequest) returns (BatchGetSnapshotResponse);
+
+    /// 游标分页全量枚举：确定性顺序、弱一致游标。
+    rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+
+    /// gRPC server-streaming 实时推送：首帧 INITIAL_SNAPSHOT，随后仅推 delta。
+    rpc SubscribeSnapshots(SubscribeSnapshotsRequest) returns (stream SnapshotEvent);
+}
+
+// ─── Messages ───
+
+message GetSnapshotRequest {
+    /// tag (table) id — 内部 32-bit 标识符。
+    uint32 tag_id = 1;
+}
+
+message GetSnapshotResponse {
+    /// 快照条目，tag 不存在时为默认空消息。
+    SnapshotEntryProto entry = 1;
+    /// tag 是否存在。
+    bool found = 2;
+}
+
+message BatchGetSnapshotRequest {
+    /// 需要查询的 tag_id 列表。
+    repeated uint32 tag_ids = 1;
+}
+
+message BatchGetSnapshotResponse {
+    /// 命中的条目列表（未命中的 tag 不返回）。
+    repeated SnapshotEntryProto entries = 1;
+}
+
+message ListSnapshotsRequest {
+    /// 不透明游标（`SnapshotCursor` bincode）；空 = 从头开始。
+    bytes cursor = 1;
+    /// 页大小 1..10000，默认 1000。
+    uint32 limit = 2;
+}
+
+message ListSnapshotsResponse {
+    /// 本页快照条目。
+    repeated SnapshotEntryProto entries = 1;
+    /// 下一页游标；空 = 已扫完。
+    bytes next_cursor = 2;
+    /// 是否还有更多页。
+    bool has_more = 3;
+}
+
+message SubscribeSnapshotsRequest {
+    /// 订阅的 tag_id 列表。空列表表示订阅所有 tag。
+    repeated uint32 tag_ids = 1;
+    /// 客户端提供的订阅唯一标识符 (UUID v4 字符串)。
+    string subscription_id = 2;
+}
+
+message SnapshotEntryProto {
+    /// tag (table) id。
+    uint32 tag_id = 1;
+    /// 首列 f64 视图（单列快查 / 兼容路径）。
+    double value = 2;
+    /// 首列 OPC UA 质量码 (QQSSSSLL 编码)。
+    uint32 quality = 3;
+    /// 源时间戳 = max(ts_values)，epoch 纳秒（兼容字段）。
+    int64 ts = 4;
+    /// 服务器接收时间戳 = max(server_ts_values)，epoch 纳秒（兼容字段）。
+    int64 server_ts = 5;
+    /// 单调递增版本号。
+    uint64 version = 6;
+    /// 是否为派生标签。
+    bool is_derived = 7;
+    /// TTL 过期标记。
+    bool ttl_expired = 8;
+    /// 多列多类型值（column_id 升序）。
+    repeated ColumnValue values = 9;
+    /// 列级质量码（与 values 对齐）。
+    repeated ColumnQuality qualities = 10;
+    /// 列级源时间戳（与 values 对齐）。
+    repeated ColumnTimestamp ts_values = 11;
+    /// 列级服务器时间戳（与 values 对齐）。
+    repeated ColumnTimestamp server_ts_values = 12;
+}
+
+/// 类型化列值，对齐 sensearcdb-common 的 TypedValue 物理类型族。
+message ColumnValue {
+    /// 列 id（column_id，升序）。
+    uint32 column_id = 1;
+
+    oneof value {
+        /// 64 位浮点。
+        double f64_value = 2;
+        /// 32 位浮点。
+        float f32_value = 3;
+        /// 64 位有符号整数。
+        int64 i64_value = 4;
+        /// 64 位无符号整数。
+        uint64 u64_value = 5;
+        /// 32 位有符号整数。
+        int32 i32_value = 6;
+        /// 布尔值。
+        bool bool_value = 7;
+        /// UTF-8 字符串。
+        string string_value = 8;
+        /// 16 位枚举值。
+        uint32 enum16_value = 9;
+    }
+}
+
+/// 列级质量码。
+message ColumnQuality {
+    /// 列 id。
+    uint32 column_id = 1;
+    /// OPC UA QQSSSSLL 质量码。
+    uint32 quality = 2;
+}
+
+/// 列级时间戳。
+message ColumnTimestamp {
+    /// 列 id。
+    uint32 column_id = 1;
+    /// 时间戳（epoch 纳秒）。
+    int64 timestamp = 2;
+}
+
+/// gRPC 实时推送的单条事件。
+message SnapshotEvent {
+    /// 事件类型。
+    enum EventType {
+        /// 未指定（不应出现）。
+        UNSPECIFIED = 0;
+        /// 初始全量快照。
+        INITIAL_SNAPSHOT = 1;
+        /// 增量变更。
+        DELTA = 2;
+        /// 心跳保活。
+        HEARTBEAT = 3;
+    }
+
+    EventType event_type = 1;
+
+    /// INITIAL_SNAPSHOT 时返回所有订阅 tag 的当前值。
+    /// DELTA 时仅返回变化的条目。
+    repeated SnapshotEntryProto entries = 2;
+
+    /// 全局版本号（用于客户端断线重连后判断是否需要全量同步）。
+    uint64 global_version = 3;
+
+    /// 服务器时间戳 (epoch 纳秒)。
+    int64 server_ts = 4;
+}

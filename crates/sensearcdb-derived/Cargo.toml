@@ -1,0 +1,30 @@
+[package]
+name = "sensearcdb-derived"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB Derived Tag Engine: Pratt-parser expression evaluation with DAG dependency graph and data-driven recalculation"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+arc-swap = { workspace = true }
+prometheus = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+axum = { workspace = true }
+uuid = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+rusqlite = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"

@@ -1,0 +1,67 @@
+// SenseArcDB — row-based cross-table message definitions.
+//
+// MultiTableBatch is the core data transfer format for ingestion.
+// Each batch carries N rows (points) across one or more tables,
+// where each row is a sparse collection of typed column values.
+
+syntax = "proto3";
+
+package sensearcdb.ingest;
+
+// ─── Row-based cross-table messages ───
+
+/// 一条消息携带跨表、跨时间戳的 N 个点。
+///
+/// 每个点是最小可重复单元，自带表标识（table_name）。
+message MultiTableBatch {
+    repeated PointRow points = 1;
+}
+
+/// 一个点 = 一行单元：一张表的某一时间戳下的稀疏列值集合。
+message PointRow {
+    /// 目标表名（v1 必填，服务端 SchemaMirror resolve table_name→table_id）。
+    string table_name = 1;
+
+    /// 目标表 ID（v2 可选）。v1 采集器不填（缺省 = 零字节），服务端用 table_name
+    /// resolve；v2 采集器预对齐 name→server_table_id 后直填，服务端优先直用。
+    optional uint32 table_id = 2;
+
+    /// 源时间戳（epoch 纳秒）。
+    int64 ts_ns = 3;
+
+    /// 服务器接收时间戳（epoch 纳秒，可选）。
+    /// ingest 路径下服务端忽略此字段、自打 server_ts（不信任客户端时钟）；
+    /// 字段保留给集群复制 / PITR 回放等需保真 server_ts 的路径。
+    optional int64 server_ts_ns = 4;
+
+    /// 本点写到的列值（稀疏：只含实际写到的列；column_id 显式贯穿）。
+    repeated ColumnValue values = 5;
+
+    /// OPC UA QQSSSSLL 质量码（u8 编码进 uint32）。缺省 = 0xC0 (Good)。
+    optional uint32 quality = 6;
+
+    /// 数据点标记位（u8）：bit0=INTERPOLATED, bit1=BACKFILL, bit2=GAP_MARKER。
+    optional uint32 flags = 7;
+
+    /// LWW 决胜键（optional）：单机写 = 缺省（服务端 WAL 分配逐点 seq）；
+    /// 集群 = Raft index；PITR/迁移/导入 = 显式。采集器路径恒缺省。
+    optional uint64 write_seq = 8;
+}
+
+/// 单列单值：`column_id` 显式贯穿 + 8 个物理类型的 oneof。
+message ColumnValue {
+    /// 逻辑列 ID。column_id == 0 即「1 表 1 列」的 N=1 退化形态。
+    /// protobuf 无 uint16 标量类型，故用 uint32 编码 u16（高位恒 0）。
+    uint32 column_id = 1;
+
+    oneof value {
+        double f64_val    = 2;  // TypedValue::F64
+        float  f32_val    = 3;  // TypedValue::F32
+        int64  i64_val    = 4;  // TypedValue::I64
+        uint64 u64_val    = 5;  // TypedValue::U64
+        int32  i32_val    = 6;  // TypedValue::I32
+        bool   bool_val   = 7;  // TypedValue::Bool
+        string str_val    = 8;  // TypedValue::String
+        uint32 enum16_val = 9;  // TypedValue::Enum16（u16 无符号编码）
+    }
+}

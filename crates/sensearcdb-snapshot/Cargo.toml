@@ -1,0 +1,49 @@
+[package]
+name = "sensearcdb-snapshot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB real-time snapshot database: SnapshotStore, SSE, Replay"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+arrow = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+parking_lot = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+arc-swap = { workspace = true }
+
+fxhash = { workspace = true }
+num_cpus = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+chrono = { workspace = true }
+
+tokio-stream = { workspace = true }
+prometheus = { workspace = true }
+bytes = { workspace = true }
+async-trait = { workspace = true }
+
+axum = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+config = { workspace = true }
+futures = "0.3"
+
+[build-dependencies]
+tonic-build = { version = "0.11" }
+protoc-bin-vendored = "3.0"
+
+[dev-dependencies]
+tempfile = "3.10"
+sensearcdb-common = { workspace = true }
+arc-swap = { workspace = true }
+fxhash = { workspace = true }

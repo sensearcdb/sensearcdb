@@ -1,0 +1,12 @@
+# SenseArcDB 单机版最小配置样例
+#
+# 仅保留单机版必需字段；其余 section 全部走 AppConfig 内置默认值。
+# 端口均为常量（REST 5100 / metrics 5101 / gRPC 5201/5202/5206），无需在此配置。
+
+[paths]
+data_dir = "./data"
+
+# JWT 密钥路径：deploy::FirstRun 会在启动时 create_dir_all 其父目录。
+# 默认值 "/etc/sensearc/jwt/signing.key" 在 Windows 会落到驱动器根，这里改为相对路径。
+[security.auth.jwt]
+signing_key_path = "./data/jwt/signing.key"

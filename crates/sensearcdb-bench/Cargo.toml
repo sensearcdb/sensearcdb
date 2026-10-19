@@ -1,0 +1,13 @@
+[package]
+name = "sensearcdb-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB N=1 single-tenant performance baseline harness"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+sensearcdb-engine = { workspace = true }
+tokio = { workspace = true }
+tempfile = "3.10"

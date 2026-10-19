@@ -1,0 +1,31 @@
+[package]
+name = "sensearcdb-cq"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB CQ (Continuous Query) engine: timer-driven 4-layer tumbling window pre-aggregation with AutoRouter"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+sensearcdb-schema = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+arc-swap = { workspace = true }
+arrow = { workspace = true }
+prometheus = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+sqlparser = { workspace = true }
+rusqlite = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"

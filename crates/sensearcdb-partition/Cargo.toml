@@ -1,0 +1,32 @@
+[package]
+name = "sensearcdb-partition"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB partition management: state machine, routing, recovery, API"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+sensearcdb-engine = { workspace = true }
+
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+chrono = { workspace = true }
+rusqlite = { workspace = true }
+axum = { workspace = true }
+prometheus = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"
+tower = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }

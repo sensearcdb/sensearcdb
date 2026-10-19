@@ -1,0 +1,30 @@
+# === Rust 编译产物 ===
+/target/
+**/*.rs.bk
+
+# === 运行数据（含 TDE 密钥 kek.bin / deks.bin，绝不能进 git）===
+/data/
+
+# === 日志 ===
+/logs/
+*.log
+*.err
+
+# === 项目数据（.workbuddy，WorkBuddy 工作目录，绝不能进 git）===
+/.workbuddy/
+
+# === 开发证书 / 私钥（含 crates/ingest 下的测试证书）===
+**/pki/
+
+# === 凭据文件 ===
+**/credentials*.json
+
+# === AI 模型（闭源，二进制）===
+/models/
+
+# === IDE / 编辑器 ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

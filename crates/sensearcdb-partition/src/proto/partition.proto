@@ -1,0 +1,104 @@
+// SenseArcDB — PartitionAdmin gRPC service definitions.
+//
+// PartitionAdmin manages time-based data partitions:
+// listing, querying, freezing, and advancing partitions.
+
+syntax = "proto3";
+
+package sensearcdb.partition;
+
+/// PartitionAdmin provides management APIs for time-based data partitions.
+service PartitionAdmin {
+    /// List all partitions for a given table.
+    rpc ListPartitions(ListPartitionsRequest) returns (ListPartitionsResponse);
+
+    /// Get details of a specific partition.
+    rpc GetPartition(GetPartitionRequest) returns (PartitionInfo);
+
+    /// Force-freeze an active partition.
+    rpc FreezePartition(FreezePartitionRequest) returns (FreezePartitionResponse);
+
+    /// Advance to the next partition (close current, open new).
+    rpc AdvancePartition(AdvancePartitionRequest) returns (AdvancePartitionResponse);
+}
+
+/// Request to list partitions for a table.
+message ListPartitionsRequest {
+    /// Table name. Empty means list all tables.
+    string table_name = 1;
+}
+
+/// Response containing partition info for one or more tables.
+message ListPartitionsResponse {
+    /// List of partition metadata.
+    repeated PartitionInfo partitions = 1;
+}
+
+/// Request to get a specific partition.
+message GetPartitionRequest {
+    /// Table name.
+    string table_name = 1;
+
+    /// Partition ID (auto-increment integer).
+    uint64 partition_id = 2;
+}
+
+/// Metadata for a single partition.
+message PartitionInfo {
+    /// Unique partition identifier.
+    uint64 partition_id = 1;
+
+    /// Owning table name.
+    string table_name = 2;
+
+    /// Current state: "Active" | "Frozen" | "Compacting" | "Archived" | "Expired".
+    string state = 3;
+
+    /// Partition start time (epoch nanoseconds, inclusive).
+    int64 start_time_ns = 4;
+
+    /// Partition end time (epoch nanoseconds, exclusive).
+    int64 end_time_ns = 5;
+
+    /// Number of force_freeze operations performed on this partition.
+    uint64 freeze_count = 6;
+
+    /// Estimated row count.
+    uint64 row_count = 7;
+
+    /// Disk usage in bytes.
+    uint64 disk_bytes = 8;
+}
+
+/// Request to freeze a partition.
+message FreezePartitionRequest {
+    /// Table name.
+    string table_name = 1;
+
+    /// Partition ID to freeze.
+    uint64 partition_id = 2;
+}
+
+/// Response after a freeze attempt.
+message FreezePartitionResponse {
+    /// Whether the freeze succeeded.
+    bool success = 1;
+
+    /// New partition state after operation.
+    string new_state = 2;
+}
+
+/// Request to advance to the next partition.
+message AdvancePartitionRequest {
+    /// Table name.
+    string table_name = 1;
+}
+
+/// Response after partition advance.
+message AdvancePartitionResponse {
+    /// ID of the partition that was closed.
+    uint64 old_partition_id = 1;
+
+    /// ID of the newly created active partition.
+    uint64 new_partition_id = 2;
+}

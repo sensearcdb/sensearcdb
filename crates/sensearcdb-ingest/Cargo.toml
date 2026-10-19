@@ -1,0 +1,40 @@
+[package]
+name = "sensearcdb-ingest"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB data ingestion layer: gRPC, REST, engine write path"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+sensearcdb-engine = { workspace = true }
+
+arrow = { workspace = true }
+
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+tokio-stream = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
+futures = "0.3"
+async-trait = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }
+
+[dev-dependencies]
+# 临时目录（writer / write_service 测试内起 Engine / 快照 store）。
+tempfile = "3.10"
+# 回归 QA：行式 wire → 快照 store 端到端边界测试需要跨 crate 访问 snapshot。
+sensearcdb-snapshot = { workspace = true }

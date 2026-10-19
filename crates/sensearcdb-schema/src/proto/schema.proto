@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package sensearcdb.schema.v1;
+
+// ─── TableInfo ─────────────────────────────────────────────────────────────
+
+message TableInfo {
+    uint32 table_id = 1;
+    string table_name = 2;
+    uint32 schema_id = 3;
+    uint32 schema_version = 4;
+    optional string table_group = 5;
+    TableType table_type = 6;
+    optional string description = 7;
+    bool enabled = 8;
+    repeated ColumnDef columns = 9;
+    int64 deleted_at_nanos = 10;   // 0 = not deleted
+    int64 created_at_nanos = 11;
+    int64 updated_at_nanos = 12;
+}
+
+enum TableType {
+    TABLE_TYPE_UNSPECIFIED = 0;
+    TABLE_TYPE_RAW = 1;
+    TABLE_TYPE_DERIVED = 2;
+    TABLE_TYPE_CQ = 3;
+    TABLE_TYPE_STREAM = 4;
+}
+
+message ColumnDef {
+    uint32 column_id = 1;
+    string name = 2;
+    DataType data_type = 3;
+    double precision = 4;
+    bool nullable = 5;
+    optional string unit = 6;
+    optional string description = 7;
+    optional DeadbandConfig deadband = 8;
+    repeated string enum_values = 9;
+    int64 deleted_at_nanos = 10;
+    double range_low = 11;
+    double range_high = 12;
+    optional double instrument_range_low = 13;
+    optional double instrument_range_high = 14;
+    uint32 display_digits = 15;
+}
+
+enum DataType {
+    DATA_TYPE_UNSPECIFIED = 0;
+    DATA_TYPE_F64 = 1;
+    DATA_TYPE_F32 = 2;
+    DATA_TYPE_I64 = 3;
+    DATA_TYPE_U64 = 4;
+    DATA_TYPE_I32 = 5;
+    DATA_TYPE_BOOL = 6;
+    DATA_TYPE_STRING = 7;
+    DATA_TYPE_ENUM16 = 8;
+}
+
+message DeadbandConfig {
+    DeadbandType deadband_type = 1;
+    double value = 2;
+}
+
+enum DeadbandType {
+    DEADBAND_TYPE_UNSPECIFIED = 0;
+    DEADBAND_TYPE_NONE = 1;
+    DEADBAND_TYPE_ABSOLUTE = 2;
+    DEADBAND_TYPE_PERCENT = 3;
+}
+
+// ─── RPC Messages ─────────────────────────────────────────────────────────
+
+message GetTableRequest {
+    uint32 table_id = 1;
+}
+
+message GetTableResponse {
+    optional TableInfo table = 1;
+}
+
+message ListTablesRequest {
+    // empty — returns all non-deleted tables
+}
+
+message ListTablesResponse {
+    repeated TableInfo tables = 1;
+}
+
+message WatchSchemaRequest {
+    // empty — streams all schema change events
+}
+
+message SchemaChangeEvent {
+    oneof event {
+        TableCreated table_created = 1;
+        TableAltered table_altered = 2;
+        TableDeleted table_deleted = 3;
+    }
+}
+
+message TableCreated {
+    uint32 table_id = 1;
+}
+
+message TableAltered {
+    uint32 table_id = 2;
+    uint32 new_version = 3;
+    uint32 new_schema_id = 4;
+}
+
+message TableDeleted {
+    uint32 table_id = 1;
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────
+
+service SchemaService {
+    rpc GetTable(GetTableRequest) returns (GetTableResponse);
+    rpc ListTables(ListTablesRequest) returns (ListTablesResponse);
+    rpc WatchSchema(WatchSchemaRequest) returns (stream SchemaChangeEvent);
+}

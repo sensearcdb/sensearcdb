@@ -1,0 +1,35 @@
+[package]
+name = "sensearcdb-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB storage engine: SAC files, WAL, MemTable, Compaction, Query"
+
+[dependencies]
+sensearcdb-common = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+bincode = { workspace = true }
+parking_lot = { workspace = true }
+arc-swap = { workspace = true }
+rayon = { workspace = true }
+bytes = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+prometheus = { workspace = true }
+chrono = { workspace = true }
+
+lz4 = { workspace = true }
+zstd = { workspace = true }
+crc32c = { workspace = true }
+memmap2 = "0.9"
+
+arrow = { workspace = true }
+arrow-flight = { workspace = true }
+sqlparser = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"

@@ -1,0 +1,45 @@
+[package]
+name = "sensearcdb-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SenseArcDB single-node server (open core assembly layer)"
+
+[[bin]]
+name = "sensearcdb"
+path = "src/main.rs"
+
+[dependencies]
+# ─── 开源引擎 crate ───
+sensearcdb-common = { workspace = true }
+sensearcdb-engine = { workspace = true }
+sensearcdb-schema = { workspace = true }
+sensearcdb-snapshot = { workspace = true }
+sensearcdb-partition = { workspace = true }
+sensearcdb-cq = { workspace = true }
+sensearcdb-stream = { workspace = true }
+sensearcdb-derived = { workspace = true }
+sensearcdb-observe = { workspace = true }
+sensearcdb-deploy = { workspace = true }
+sensearcdb-ingest = { workspace = true }
+
+# ─── 运行时 / 网络 ───
+tokio = { workspace = true }
+tonic = { workspace = true }
+axum = { workspace = true }
+
+# ─── 日志 / 指标 ───
+tracing = { workspace = true }
+prometheus = { workspace = true }
+
+# ─── 错误处理 ───
+anyhow = { workspace = true }
+
+# ─── 并发与同步 ───
+parking_lot = { workspace = true }
+arc-swap = { workspace = true }
+
+# ─── 杂项 ───
+async-trait = { workspace = true }
+chrono = { workspace = true }

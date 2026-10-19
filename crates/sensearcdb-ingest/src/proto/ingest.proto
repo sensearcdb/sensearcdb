@@ -1,0 +1,148 @@
+// SenseArcDB — Ingest gRPC service definitions.
+//
+// Defines WriteService (streaming ingest), QueryService (Arrow Flight query),
+// and CollectorAdmin (collector registration + bidirectional heartbeat).
+
+syntax = "proto3";
+
+package sensearcdb.ingest;
+
+import "point_batch.proto";
+
+// ─── Write Service ───
+
+/// WriteService handles high-throughput data ingestion.
+/// Supports both streaming batch writes and single-point writes.
+service WriteService {
+    /// Client-streaming ingest: collector pushes 行式跨表批量数据点。
+    rpc Ingest(stream MultiTableBatch) returns (WriteReceipt);
+
+    /// Single-point write for low-frequency or admin use cases.
+    rpc SingleWrite(SingleWriteRequest) returns (WriteReceipt);
+}
+
+/// Write receipt returned after successful (or partial) ingestion.
+message WriteReceipt {
+    /// Number of rows successfully written.
+    uint64 rows_written = 1;
+
+    /// Server timestamp at write completion (epoch nanoseconds).
+    uint64 timestamp_ns = 2;
+
+    /// Status: "ok" | "partial" | "rejected".
+    string status = 3;
+
+    /// Error message if status is "rejected" or "partial".
+    string error = 4;
+}
+
+/// Single data point write request.
+message SingleWriteRequest {
+    /// Target table name.
+    string table_name = 1;
+
+    /// Target column name.
+    string column_name = 2;
+
+    /// Timestamp of the data point (epoch nanoseconds).
+    int64 timestamp_ns = 3;
+
+    /// Value — oneof covering all supported physical types.
+    oneof value {
+        double f64_val = 4;
+        float f32_val = 5;
+        int64 i64_val = 6;
+        uint64 u64_val = 7;
+        int32 i32_val = 8;
+        bool bool_val = 9;
+        string string_val = 10;
+    }
+
+    /// OPC UA quality code (u8, QQSSSSLL encoding).
+    uint32 quality = 11;
+}
+
+// ─── Query Service ───
+
+/// QueryService provides SQL-based querying with Arrow Flight result streaming.
+service QueryService {
+    /// Execute a SQL query and stream results as Arrow record batches.
+    rpc Query(QueryRequest) returns (stream QueryResponse);
+}
+
+/// Query request containing SQL and optional parameter bindings.
+message QueryRequest {
+    /// SQL query string (subset of standard SQL).
+    string query = 1;
+
+    /// Named parameter bindings (e.g., {"start": "2024-01-01T00:00:00Z"}).
+    map<string, string> params = 2;
+}
+
+/// Streaming response containing one Arrow record batch.
+message QueryResponse {
+    /// Arrow IPC-format record batch bytes.
+    bytes arrow_batch = 1;
+
+    /// Number of rows in this batch.
+    uint32 row_count = 2;
+}
+
+// ─── Collector Admin Service ───
+
+/// CollectorAdmin manages collector lifecycle: registration and bidirectional heartbeat.
+service CollectorAdmin {
+    /// Register a collector with the server.
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+
+    /// Bidirectional heartbeat stream for health monitoring.
+    rpc Heartbeat(stream HeartbeatRequest) returns (stream HeartbeatResponse);
+}
+
+/// Registration request from a collector.
+message RegisterRequest {
+    /// Unique collector identifier.
+    string collector_id = 1;
+
+    /// Collector mode: "embedded" | "remote".
+    string mode = 2;
+
+    /// Configured ingestion rate (points/sec).
+    uint64 points_per_sec = 3;
+}
+
+/// Registration response.
+message RegisterResponse {
+    /// Echoes the collector ID.
+    string collector_id = 1;
+
+    /// Whether the registration was accepted.
+    bool accepted = 2;
+
+    /// Human-readable status message.
+    string message = 3;
+}
+
+/// Heartbeat sent from collector to server.
+message HeartbeatRequest {
+    /// Collector identifier.
+    string collector_id = 1;
+
+    /// Collector-local timestamp (epoch nanoseconds).
+    uint64 timestamp_ns = 2;
+
+    /// Number of active driver sessions.
+    uint32 active_sessions = 3;
+
+    /// Data points ingested since last heartbeat.
+    uint64 points_since_last = 4;
+}
+
+/// Heartbeat acknowledgment from server.
+message HeartbeatResponse {
+    /// Whether the heartbeat was acknowledged.
+    bool acknowledged = 1;
+
+    /// Server timestamp (epoch nanoseconds).
+    uint64 server_timestamp_ns = 2;
+}
