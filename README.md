@@ -1,5 +1,7 @@
 # SenseArcDB
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **SenseArcDB** is an industrial & IoT time-series database written in Rust, designed as a high-performance, self-contained single-node core — a modern alternative to legacy historians (e.g. PI System) and general-purpose TSDBs (e.g. InfluxDB).
 
 This repository contains the **open-source core**. It is production-grade storage and query engine only; enterprise capabilities (AI analytics, alerting, clustering, security/compliance, protocol collectors, edge) live in the commercial edition.
@@ -15,6 +17,19 @@ This repository contains the **open-source core**. It is production-grade storag
 - **Continuous queries / streams / derived tags** — downsampling, stream processing, and computed tags.
 - **Foundational multi-tenancy** — logical tenant isolation with per-tenant data separation.
 - **gRPC + REST** — Arrow IPC streaming over gRPC for reads, REST for ops and simple writes.
+
+## Performance
+
+Figures below are from internal measurements (single node). They are indicative, not a benchmark against competitors — for apples-to-apples comparison, run the same workload (e.g. TSBS) on identical hardware.
+
+| Metric | Value | Workload |
+|--------|-------|----------|
+| End-to-end ingest | **110K rows/s** | TSBS IoT, 10-column wide table (1 truck = 1 table), 8 workers, gRPC |
+| Raw engine write | **1.33M ops/s** (5.32M values/s) | columns = 4, direct engine call (no network) |
+| Raw engine write | **335K ops/s** (3.35M values/s) | columns = 10 (TSBS wide table) |
+| Query latency | **~0.75 ms P99** | single-table range scan |
+
+Benchmark unit: `1 ops = 1 data point = 1 row = --columns scalar values`.
 
 ## Quick start
 
