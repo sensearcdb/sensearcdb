@@ -24,10 +24,11 @@ Figures below are from internal measurements (single node). They are indicative,
 
 | Metric | Value | Workload |
 |--------|-------|----------|
-| End-to-end ingest | **110K rows/s** | TSBS IoT, 10-column wide table (1 truck = 1 table), 8 workers, gRPC |
-| Raw engine write | **1.33M ops/s** (5.32M values/s) | columns = 4, direct engine call (no network) |
-| Raw engine write | **335K ops/s** (3.35M values/s) | columns = 10 (TSBS wide table) |
-| Query latency | **~0.75 ms P99** | single-table range scan |
+| Engine write | **1.33M rows/s** (5.32M values/s) | columns = 4, direct engine call, no network |
+| Engine write | **335K rows/s** (3.35M values/s) | columns = 10 (TSBS wide table) |
+| WAL throughput (group level) | **2.35M points/s** | page-cache write + background fsync |
+| End-to-end ingest | 110K rows/s | TSBS IoT 10-col via gRPC + load toolchain (toolchain-bound, not engine-bound) |
+| Query latency | ~0.75 ms P99 | single-table range scan |
 
 Benchmark unit: `1 ops = 1 data point = 1 row = --columns scalar values`.
 

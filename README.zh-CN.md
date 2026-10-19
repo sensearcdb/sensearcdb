@@ -24,10 +24,11 @@
 
 | 指标 | 数值 | 负载 |
 |------|------|------|
-| 端到端写入 | **110K rows/s** | TSBS IoT，10 列宽表（1 卡车 = 1 表），8 worker，gRPC |
-| 引擎裸写 | **1.33M ops/s**（5.32M values/s） | columns = 4，引擎直调（无网络） |
-| 引擎裸写 | **335K ops/s**（3.35M values/s） | columns = 10（TSBS 宽表） |
-| 查询延迟 | **~0.75 ms P99** | 单表范围扫描 |
+| 引擎写入 | **1.33M rows/s**（5.32M values/s） | columns = 4，引擎直调（无网络） |
+| 引擎写入 | **335K rows/s**（3.35M values/s） | columns = 10（TSBS 宽表） |
+| WAL 吞吐（group 档） | **2.35M points/s** | page cache 写入 + 后台 fsync |
+| 端到端写入 | 110K rows/s | TSBS IoT 10 列，经 gRPC + 加载工具链（瓶颈在工具链，非引擎） |
+| 查询延迟 | ~0.75 ms P99 | 单表范围扫描 |
 
 基准口径：`1 ops = 1 数据点 = 1 行 = --columns 个标量值`。
 
