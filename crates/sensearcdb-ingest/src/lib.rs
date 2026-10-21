@@ -85,7 +85,15 @@ impl IngestLayer {
             }
             rest::health::ReadinessState::ready()
         });
-        rest::router::build_router(writer, false, false, None, None, readiness_probe)
+        rest::router::build_router(
+            writer,
+            false,
+            false,
+            None,
+            None,
+            Some(self.engine.clone()),
+            readiness_probe,
+        )
     }
 }
 

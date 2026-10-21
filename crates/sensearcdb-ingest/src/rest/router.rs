@@ -29,6 +29,7 @@ use sensearcdb_common::route_registry::RouteRegistryExt;
 /// * `enable_rate_limit` - Whether to enable rate limiting middleware.
 /// * `resolver` - Optional `table_name → table_id` resolver (GAP2-ING-02).
 /// * `tenant_resolver` - Optional request tenant resolver (S5 Step 2).
+/// * `query_engine` - Optional query engine for `POST /api/v1/query` (None → 503).
 /// * `readiness_probe` - Readiness probe closure (aggregates WAL/MemTable/Leader state).
 pub fn build_router(
     writer: Arc<dyn crate::writer::EngineWriter>,
@@ -36,6 +37,7 @@ pub fn build_router(
     _enable_rate_limit: bool,
     resolver: Option<Arc<dyn write::TableNameResolver>>,
     tenant_resolver: Option<write::TenantResolver>,
+    query_engine: Option<Arc<sensearcdb_engine::engine::Engine>>,
     readiness_probe: ReadinessProbe,
 ) -> Router {
     let cors = CorsLayer::new()
@@ -47,7 +49,7 @@ pub fn build_router(
     let write_state = write::WriteState {
         writer,
         resolver,
-        tenant_resolver,
+        tenant_resolver: tenant_resolver.clone(),
     };
     let write_router = Router::new()
         .register_route(
@@ -61,10 +63,16 @@ pub fn build_router(
         .with_state(write_state);
 
     // Query routes
-    let query_router = Router::new().register_route(
-        "/api/v1/query",
-        sensearcdb_common::route!(post(query::handle_query)),
-    );
+    let query_state = query::QueryState {
+        engine: query_engine,
+        tenant_resolver,
+    };
+    let query_router = Router::new()
+        .register_route(
+            "/api/v1/query",
+            sensearcdb_common::route!(post(query::handle_query)),
+        )
+        .with_state(query_state);
 
     // Schema 路由已由 sensearcdb-schema 的 `api::rest::create_router` 统一提供，
     // 此处不再注册 ingest 侧遗留的假 schema 桩（否则与真实 schema router 在顶层

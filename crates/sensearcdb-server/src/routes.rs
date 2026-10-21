@@ -81,6 +81,7 @@ pub fn build_router(state: &AppState) -> Router {
         false, // rate_limit 默认关闭
         table_resolver,
         Some(tenant_resolver.clone()),
+        Some(state.engine.clone()),
         readiness_probe,
     );
 
