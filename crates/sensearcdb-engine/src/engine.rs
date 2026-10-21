@@ -177,6 +177,8 @@ pub struct Engine {
     durability_resolver: RwLock<Option<Arc<dyn DurabilityResolver>>>,
     /// SAC 落盘水位 `S`（C2）：flush 完成后推进，供回收器（C3）与恢复层 2（C4）使用。
     sac_watermark: Arc<SacWatermark>,
+    /// TDE 加密器（供 WAL 回放读取器使用；`None` = TDE 关）。
+    encryptor: SharedEncryptor,
 }
 
 impl Engine {
@@ -242,6 +244,7 @@ impl Engine {
             quota_gate: RwLock::new(None),
             durability_resolver: RwLock::new(None),
             sac_watermark: sac_watermark.clone(),
+            encryptor: encryptor.clone(),
         };
 
         // 启动 Group Commit 后台循环（durable 入队触发 + group 1MB 阈值 + 1s 兜底 fsync）
@@ -521,6 +524,37 @@ impl Engine {
         }
 
         Ok(batch.points.len())
+    }
+
+    /// 启动恢复：回放 WAL 中 `raft_index > SAC 落盘水位 S` 的帧，重建 MemTable（历史查询缓冲）。
+    ///
+    /// 只插 MemTable、不写 WAL、不 fanout snapshot sink（三条硬约束）。
+    /// 逐点 seq = 帧首点 seq(raft_index) + 帧内下标（alloc_seqs 连续分配）。
+    /// 返回 (回放帧数, 回放点数)。
+    pub fn recover_memtable_from_wal(&self) -> Result<(usize, usize), SenseArcError> {
+        let after_seq = self.sac_watermark.current();
+        let wal_dir = self.wal.wal_dir();
+        let reader = crate::wal::WalReader::new_with_encryptor(wal_dir, self.encryptor.clone());
+        let records = reader.replay_after(after_seq, u32::MAX)?;
+
+        let mut frames = 0usize;
+        let mut points = 0usize;
+        for rec in &records {
+            let seqs: Vec<u64> = (0..rec.points.len()).map(|i| rec.raft_index + i as u64).collect();
+            self.memtable.insert_batch(&rec.points, &seqs);
+            frames += 1;
+            points += rec.points.len();
+
+            // 回放 tail 可能远超 freeze_threshold，逐帧检查冻结，避免 active 无限堆积触发 write_stalled。
+            if self.memtable.should_freeze() {
+                let freeze = self.force_freeze();
+                if freeze.frozen {
+                    self.flush_coordinator.request_flush();
+                }
+            }
+        }
+        tracing::info!(frames, points, after_seq, "MemTable rebuilt from WAL replay");
+        Ok((frames, points))
     }
 
     /// 执行 SQL 查询。

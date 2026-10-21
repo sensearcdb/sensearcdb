@@ -1851,6 +1851,17 @@ pub async fn bootstrap(config_path: &str) -> anyhow::Result<AppState> {
     let snapshot_store: Arc<ArcSwap<SnapshotStore>> =
         Arc::new(ArcSwap::new(Arc::new(recovery_result.store)));
 
+    // 方案 A：快照三层恢复完成后，回放 WAL tail 重建 MemTable（历史查询缓冲）。
+    // 必须早于下方 set_snapshot_sink（回放期间 sink 为 None，双重保证不 fanout）。
+    match engine.recover_memtable_from_wal() {
+        Ok((frames, points)) => {
+            tracing::info!(frames, points, "MemTable rebuilt from WAL replay (startup)");
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "MemTable WAL replay failed (best-effort, history tail may be missing)");
+        }
+    }
+
     // 后台快照检查点。
     let snapshot_checkpointer = Arc::new(SnapshotCheckpointer::new(
         snapshot_store.clone(),
